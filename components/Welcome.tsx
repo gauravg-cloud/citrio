@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ICONS } from '../constants';
 
@@ -6,6 +7,23 @@ interface Props {
 }
 
 const Welcome: React.FC<Props> = ({ onStart }) => {
+  
+  const handleStart = async () => {
+    // Check for API Key selection if running in AI Studio environment
+    if (window.aistudio) {
+      try {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        if (!hasKey) {
+          await window.aistudio.openSelectKey();
+          // We assume selection was successful if the dialog closes or returns
+        }
+      } catch (error) {
+        console.error("Error verifying API key:", error);
+      }
+    }
+    onStart();
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 relative overflow-hidden">
       
@@ -38,7 +56,7 @@ const Welcome: React.FC<Props> = ({ onStart }) => {
 
         <div className="pt-8">
           <button
-            onClick={onStart}
+            onClick={handleStart}
             className="group relative inline-flex items-center justify-center gap-3 bg-citrio-dark text-white font-bold text-lg px-8 py-4 rounded-full transition-all hover:bg-slate-800 hover:scale-105 shadow-xl shadow-slate-900/20"
           >
             Launch Visibility Scan
@@ -51,6 +69,10 @@ const Welcome: React.FC<Props> = ({ onStart }) => {
            <div className="flex items-center justify-center gap-2 grayscale hover:grayscale-0 transition-all text-slate-900 opacity-60 hover:opacity-100">{ICONS.Zap} Perplexity</div>
            <div className="flex items-center justify-center gap-2 grayscale hover:grayscale-0 transition-all text-slate-900 opacity-60 hover:opacity-100">{ICONS.Bot} Claude</div>
            <div className="flex items-center justify-center gap-2 grayscale hover:grayscale-0 transition-all text-slate-900 opacity-60 hover:opacity-100">{ICONS.Zap} Gemini</div>
+        </div>
+        
+        <div className="text-xs text-slate-400 mt-8">
+          <p>Requires a paid Google Cloud Project API Key with Billing enabled.</p>
         </div>
       </div>
     </div>

@@ -19,13 +19,28 @@ export interface Topic {
   justification?: string; // e.g. "Detected on your Product page"
 }
 
-export interface GeneratedPrompt {
+export interface PromptAnalysisResult {
   id: string;
   topic: string;
   text: string;
   intent: 'Comparison' | 'Discovery' | 'Commercial' | 'Informational';
   isEdited?: boolean;
+  
+  // Post-Analysis Data
+  responseDate: string;
+  model: string; // Fixed to 'ChatGPT-4o' for this view
+  responseText: string;
+  brandMentioned: boolean;
+  competitorsMentioned: string[]; // Names of competitors found
+  sentiment: 'Positive' | 'Neutral' | 'Negative';
+  rank: number | null; // e.g. 1 (Top recommendation), null (Not found)
+  
+  // New Detailed Insights
+  citations: { source: string; url: string; title?: string }[];
+  recommendation: string;
 }
+
+export type GeneratedPrompt = PromptAnalysisResult; 
 
 export interface AnalysisReport {
   overallScore: number;
@@ -38,11 +53,6 @@ export interface AnalysisReport {
     positiveMentions: number;
     negativeMentions: number;
     winRate: number; // % of head-to-head comparisons won
-  }[];
-  engineBreakdown: {
-    engine: string; // ChatGPT, Claude, Gemini, etc.
-    visibility: number;
-    topAnswer: string;
   }[];
   topicScores: {
     topic: string;
@@ -69,7 +79,7 @@ export interface AnalysisReport {
     pitchAngle: string;
     missing: boolean;
   }[];
-  promptsGenerated: GeneratedPrompt[];
+  promptsGenerated: PromptAnalysisResult[];
 }
 
 export enum AppStep {

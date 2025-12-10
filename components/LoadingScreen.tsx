@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ICONS } from '../constants';
 
@@ -16,26 +17,24 @@ const LoadingScreen: React.FC = () => {
         </div>
 
         <div>
-           <h2 className="text-2xl font-bold text-slate-900 mb-2">Analyzing Brand Visibility</h2>
-           <p className="text-slate-500 text-sm">Citrio is querying AI engines and collecting citations.</p>
+           <h2 className="text-2xl font-bold text-slate-900 mb-2">Querying ChatGPT</h2>
+           <p className="text-slate-500 text-sm">Citrio is analyzing visibility for your brand on GPT-4o.</p>
         </div>
 
-        {/* Engine Status Indicators */}
+        {/* Single Agent Status Indicator */}
         <div className="flex justify-center gap-4">
-           {['ChatGPT', 'Claude', 'Gemini', 'Perplexity', 'Copilot'].map((engine, i) => (
-             <div key={engine} className="flex flex-col items-center gap-2" style={{ animationDelay: `${i * 200}ms` }}>
-                <div className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 animate-[pulse_1.5s_infinite]">
+             <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-green-500 text-white shadow-lg shadow-green-500/30 flex items-center justify-center animate-[pulse_1.5s_infinite]">
                    {ICONS.Bot}
                 </div>
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider">{engine}</span>
+                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Active</span>
              </div>
-           ))}
         </div>
 
-        <div className="bg-white rounded-lg p-4 text-xs text-slate-500 font-mono border border-slate-200 shadow-sm">
-           <p className="animate-pulse">_ querying vector databases...</p>
-           <p className="animate-pulse delay-75">_ analyzing sentiment patterns...</p>
-           <p className="animate-pulse delay-150">_ extracting domain authority...</p>
+        <div className="bg-white rounded-lg p-4 text-xs text-slate-500 font-mono border border-slate-200 shadow-sm mt-8">
+           <p className="animate-pulse">_ connecting to vector database...</p>
+           <p className="animate-pulse delay-75">_ analyzing semantic relevance...</p>
+           <p className="animate-pulse delay-150">_ retrieving search grounding citations...</p>
         </div>
 
       </div>

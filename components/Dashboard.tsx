@@ -5,9 +5,10 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell,
   AreaChart, Area, ScatterChart, Scatter, ZAxis, ReferenceLine, CartesianGrid
 } from 'recharts';
-import { AnalysisReport, BrandProfile, GeneratedPrompt } from '../types';
+import { AnalysisReport, BrandProfile, PromptAnalysisResult } from '../types';
 import { ICONS, COLORS } from '../constants';
 import Recommendations from './Recommendations';
+import ReactMarkdown from 'react-markdown';
 
 interface Props {
   report: AnalysisReport;
@@ -19,6 +20,8 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'sov' | 'citations' | 'recommendations' | 'prompts'>('overview');
   const [citationFilter, setCitationFilter] = useState<'all' | 'missing' | 'high-auth'>('all');
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<PromptAnalysisResult | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const topicRadarData = report.topicScores.map(t => ({
     topic: t.topic,
@@ -37,8 +40,14 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
       .filter(p => p.topic === topicName)
       .map((p, i) => ({
          ...p,
-         rank: Math.floor(Math.random() * 5) + (report.topicScores.find(t => t.topic === topicName)?.brandScore || 50) > 70 ? 1 : 3
+         rank: p.rank || (p.brandMentioned ? 1 : null)
       }));
+  };
+
+  const handleCopyResponse = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   // Transformation for SOV Charts
@@ -74,6 +83,21 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
       );
     }
     return null;
+  };
+
+  const renderHighlightedText = (text: string) => {
+    return (
+        <ReactMarkdown 
+            components={{
+                strong: ({node, ...props}) => <span className="font-bold text-slate-900 bg-yellow-100/50 px-1 rounded" {...props} />,
+                table: ({node, ...props}) => <table className="w-full border-collapse border border-slate-200 text-xs my-4" {...props} />,
+                th: ({node, ...props}) => <th className="bg-slate-50 border border-slate-200 p-2 text-left" {...props} />,
+                td: ({node, ...props}) => <td className="border border-slate-200 p-2" {...props} />
+            }}
+        >
+            {text}
+        </ReactMarkdown>
+    );
   };
 
   return (
@@ -116,9 +140,9 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
           <div className="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-100">
              <div className="flex items-center gap-2 mb-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-xs text-slate-500 font-medium">System Status</span>
+                <span className="text-xs text-slate-500 font-medium">ChatGPT-4o Agent</span>
              </div>
-             <p className="text-xs text-slate-400">Scanning 5 Engines</p>
+             <p className="text-xs text-slate-400">Status: Online</p>
           </div>
           <button onClick={onReset} className="w-full flex items-center gap-2 justify-center px-4 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 text-xs transition-colors">
             {ICONS.Plus} New Project
@@ -173,9 +197,9 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
              </div>
 
              {/* Topic Analysis Grid */}
-             <div className="col-span-1 md:col-span-2 lg:col-span-3 bg-white p-6 rounded-2xl border border-slate-200 min-h-[400px] shadow-sm">
+             <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 min-h-[400px] shadow-sm">
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-bold text-slate-900 text-lg">Topic Authority Comparison</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">Topic Authority (ChatGPT-4o)</h3>
                   <div className="text-xs text-slate-500 flex gap-4">
                      <span className="flex items-center gap-1 font-medium"><span className="w-2.5 h-2.5 bg-citrio-brandLight rounded-full border border-slate-200"></span> You</span>
                      <span className="flex items-center gap-1 font-medium"><span className="w-2.5 h-2.5 bg-slate-400 rounded-full"></span> Competitors</span>
@@ -212,27 +236,6 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
                         </button>
                      ))}
                   </div>
-                </div>
-             </div>
-
-             {/* Engine Breakdown */}
-             <div className="col-span-1 md:col-span-2 lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <h3 className="font-bold text-slate-900 mb-6 text-lg">AI Engine Visibility</h3>
-                <div className="space-y-6">
-                   {report.engineBreakdown.map((eng, idx) => (
-                      <div key={idx} className="group cursor-default">
-                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm text-slate-500 font-medium group-hover:text-slate-900 transition-colors">{eng.engine}</span>
-                            <span className="text-sm font-bold text-slate-900">{eng.visibility}%</span>
-                         </div>
-                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all duration-500 ${eng.visibility > 70 ? 'bg-citrio-accent' : eng.visibility > 40 ? 'bg-citrio-brandLight' : 'bg-slate-300'}`} 
-                              style={{ width: `${eng.visibility}%` }}
-                            ></div>
-                         </div>
-                      </div>
-                   ))}
                 </div>
              </div>
           </div>
@@ -408,7 +411,7 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
                 <table className="w-full text-left">
                    <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                         <th className="p-4 text-xs font-bold text-slate-500 uppercase">Source</th>
+                         <th className="p-4 text-xs font-bold text-slate-500 uppercase">Source / URL Path</th>
                          <th className="p-4 text-xs font-bold text-slate-500 uppercase">Authority</th>
                          <th className="p-4 text-xs font-bold text-slate-500 uppercase">Status</th>
                          <th className="p-4 text-xs font-bold text-slate-500 uppercase text-right">Mentions</th>
@@ -416,44 +419,54 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
-                      {filteredCitations.map((cite, idx) => (
-                         <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                            <td className="p-4 font-medium text-slate-900">
-                               <div className="flex items-center gap-3">
-                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${cite.mentioned ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-500'}`}>
-                                     {cite.source.charAt(0).toUpperCase()}
-                                  </div>
-                                  <a href={cite.url} target="_blank" rel="noreferrer" className="hover:text-citrio-brandLight hover:underline decoration-citrio-brandLight">
-                                     {cite.source}
-                                  </a>
-                               </div>
-                            </td>
-                            <td className="p-4">
-                               <span className={`px-2 py-1 rounded-full text-[10px] border font-bold ${
-                                  cite.domainAuthority === 'High' ? 'bg-green-50 text-green-700 border-green-200' : 
-                                  cite.domainAuthority === 'Medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                  'bg-slate-100 text-slate-500 border-slate-200'
-                               }`}>
-                                  {cite.domainAuthority}
-                               </span>
-                            </td>
-                            <td className="p-4">
-                               {cite.mentioned ? (
-                                  <span className="flex items-center gap-1.5 text-green-700 text-sm font-medium bg-green-50 px-2 py-1 rounded w-fit border border-green-100">
-                                     {ICONS.CheckGreen} Found
-                                  </span>
-                               ) : (
-                                  <span className="flex items-center gap-1.5 text-rose-500 text-sm font-medium bg-rose-50 px-2 py-1 rounded w-fit border border-rose-100">
-                                     {ICONS.X} Missing
-                                  </span>
-                               )}
-                            </td>
-                            <td className="p-4 text-slate-600 text-sm font-mono text-right font-bold">{cite.count}</td>
-                            <td className="p-4 text-slate-400 hover:text-slate-900 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                               {ICONS.External}
-                            </td>
-                         </tr>
-                      ))}
+                      {filteredCitations.map((cite, idx) => {
+                         let displayUrl = cite.url.replace(/^https?:\/\/(www\.)?/, '');
+                         if(displayUrl.length > 50) displayUrl = displayUrl.substring(0, 50) + '...';
+
+                         return (
+                            <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                                <td className="p-4 font-medium text-slate-900">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${cite.mentioned ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-500'}`}>
+                                        {cite.source.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <a href={cite.url} target="_blank" rel="noreferrer" className="hover:text-citrio-brandLight hover:underline decoration-citrio-brandLight font-bold text-sm">
+                                            {cite.source}
+                                        </a>
+                                        <span className="text-[10px] text-slate-400 font-mono mt-0.5 truncate max-w-[300px]" title={cite.url}>
+                                            {displayUrl}
+                                        </span>
+                                    </div>
+                                </div>
+                                </td>
+                                <td className="p-4">
+                                <span className={`px-2 py-1 rounded-full text-[10px] border font-bold ${
+                                    cite.domainAuthority === 'High' ? 'bg-green-50 text-green-700 border-green-200' : 
+                                    cite.domainAuthority === 'Medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    'bg-slate-100 text-slate-500 border-slate-200'
+                                }`}>
+                                    {cite.domainAuthority}
+                                </span>
+                                </td>
+                                <td className="p-4">
+                                {cite.mentioned ? (
+                                    <span className="flex items-center gap-1.5 text-green-700 text-sm font-medium bg-green-50 px-2 py-1 rounded w-fit border border-green-100">
+                                        {ICONS.CheckGreen} Found
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-1.5 text-rose-500 text-sm font-medium bg-rose-50 px-2 py-1 rounded w-fit border border-rose-100">
+                                        {ICONS.X} Missing
+                                    </span>
+                                )}
+                                </td>
+                                <td className="p-4 text-slate-600 text-sm font-mono text-right font-bold">{cite.count}</td>
+                                <td className="p-4 text-slate-400 hover:text-slate-900 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href={cite.url} target="_blank" rel="noreferrer">{ICONS.External}</a>
+                                </td>
+                            </tr>
+                         );
+                      })}
                       {filteredCitations.length === 0 && (
                         <tr>
                            <td colSpan={5} className="p-8 text-center text-slate-500">
@@ -472,23 +485,92 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
            <Recommendations report={report} profile={profile} />
         )}
         
-        {/* Prompts Data */}
+        {/* Prompts Data (Revised) */}
         {activeTab === 'prompts' && (
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
-                <h3 className="text-xl font-bold text-slate-900 mb-6">Raw Prompt Data</h3>
-                <div className="grid gap-3">
-                    {report.promptsGenerated.map((p, i) => (
-                        <div key={i} className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex gap-4 group hover:border-slate-300 transition-colors">
-                            <span className="text-slate-400 font-mono text-sm opacity-50 font-bold">#{i+1}</span>
-                            <div className="flex-1">
-                                <p className="text-sm text-slate-700 font-mono mb-2 group-hover:text-slate-900 transition-colors">{p.text}</p>
-                                <div className="flex gap-2">
-                                    <span className="text-[10px] bg-white px-2 py-1 rounded text-slate-500 border border-slate-200 font-medium">{p.topic}</span>
-                                    <span className="text-[10px] bg-white px-2 py-1 rounded text-slate-500 border border-slate-200 font-medium">{p.intent}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-in flex flex-col h-[700px]">
+                <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+                   <h3 className="text-lg font-bold text-slate-900">Analysis Results</h3>
+                   <div className="text-xs text-slate-400 font-mono">{report.promptsGenerated.length} prompts analyzed</div>
+                </div>
+                
+                <div className="flex-1 overflow-auto">
+                   <table className="w-full text-left border-collapse">
+                      <thead className="bg-white sticky top-0 z-10 shadow-sm">
+                         <tr>
+                            {/* Removed Model Column */}
+                            <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">Mentioned</th>
+                            <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Competitors</th>
+                            <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">Citations</th>
+                            <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">Sentiment</th>
+                            <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Prompt</th>
+                            <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Response Snippet</th>
+                         </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                         {report.promptsGenerated.map((p, i) => (
+                            <tr key={i} onClick={() => setSelectedPrompt(p)} className="hover:bg-slate-50 cursor-pointer transition-colors group">
+                               
+                               {/* Mentioned */}
+                               <td className="p-4 text-center">
+                                  {p.brandMentioned ? (
+                                     <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-600 border border-green-200">Yes</span>
+                                  ) : (
+                                     <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200">No</span>
+                                  )}
+                               </td>
+
+                               {/* Competitors */}
+                               <td className="p-4">
+                                  <div className="flex -space-x-1">
+                                     {p.competitorsMentioned.length > 0 ? p.competitorsMentioned.slice(0, 3).map((comp, idx) => (
+                                        <div key={idx} className="w-6 h-6 rounded-full bg-slate-200 border border-white flex items-center justify-center text-[8px] font-bold text-slate-600" title={comp}>
+                                           {comp.charAt(0)}
+                                        </div>
+                                     )) : <span className="text-slate-300 text-xs">-</span>}
+                                     {p.competitorsMentioned.length > 3 && (
+                                        <div className="w-6 h-6 rounded-full bg-slate-100 border border-white flex items-center justify-center text-[8px] text-slate-500 font-bold">
+                                           +{p.competitorsMentioned.length - 3}
+                                        </div>
+                                     )}
+                                  </div>
+                               </td>
+
+                               {/* Citations Count */}
+                               <td className="p-4 text-center">
+                                  {p.citations && p.citations.length > 0 ? (
+                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                        {ICONS.External} {p.citations.length}
+                                     </span>
+                                  ) : (
+                                     <span className="text-slate-300 text-xs">-</span>
+                                  )}
+                               </td>
+
+                               {/* Sentiment */}
+                               <td className="p-4 text-center">
+                                  <span className={`text-xs font-bold ${
+                                     p.sentiment === 'Positive' ? 'text-green-600' : 
+                                     p.sentiment === 'Negative' ? 'text-rose-500' : 'text-slate-400'
+                                  }`}>
+                                     {p.sentiment}
+                                  </span>
+                               </td>
+
+                               {/* Prompt */}
+                               <td className="p-4">
+                                  <p className="text-xs text-slate-600 font-medium truncate max-w-[200px] group-hover:text-slate-900">{p.text}</p>
+                               </td>
+
+                               {/* Response */}
+                               <td className="p-4">
+                                  <p className="text-xs text-slate-400 truncate max-w-[200px] font-mono">
+                                    {p.responseText.substring(0, 50)}...
+                                  </p>
+                               </td>
+                            </tr>
+                         ))}
+                      </tbody>
+                   </table>
                 </div>
             </div>
         )}
@@ -517,7 +599,7 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
                              <div className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full ${
                                 p.rank === 1 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-slate-200 text-slate-500'
                              }`}>
-                                {p.rank === 1 ? ICONS.CheckGreen : ICONS.X} Rank #{p.rank}
+                                {p.rank === 1 ? ICONS.CheckGreen : ICONS.X} Rank #{p.rank || 'N/A'}
                              </div>
                              <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Intent: {p.intent}</span>
                           </div>
@@ -527,6 +609,115 @@ const Dashboard: React.FC<Props> = ({ report, profile, onReset }) => {
               </div>
            </div>
         )}
+
+        {/* Prompt Detail Slide-Over / Modal */}
+        {selectedPrompt && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex justify-end animate-fade-in" onClick={() => setSelectedPrompt(null)}>
+                <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-slide-up md:animate-none" onClick={e => e.stopPropagation()}>
+                    {/* Header */}
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                        <h2 className="text-xl font-bold text-slate-900">Response Details</h2>
+                        <div className="flex gap-2">
+                             <button onClick={() => handleCopyResponse(selectedPrompt.responseText)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-citrio-dark transition-colors flex items-center gap-2 text-sm font-bold">
+                                {ICONS.Copy} {copied ? 'Copied' : 'Copy'}
+                             </button>
+                             <button className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hidden md:block">{ICONS.Maximize}</button>
+                             <button onClick={() => setSelectedPrompt(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-900">{ICONS.Close}</button>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/50">
+                        {/* Meta Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                             <div>
+                                 <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Date</label>
+                                 <span className="text-sm font-medium text-slate-900 border border-slate-200 bg-white px-3 py-1 rounded-full">{selectedPrompt.responseDate}</span>
+                             </div>
+                             <div>
+                                 <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Model</label>
+                                 <span className="text-sm font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1 rounded-full flex items-center gap-1 w-fit">
+                                    {ICONS.Bot} {selectedPrompt.model}
+                                 </span>
+                             </div>
+                             <div>
+                                 <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Prompt Type</label>
+                                 <span className="text-sm font-medium text-purple-600 bg-purple-50 border border-purple-100 px-3 py-1 rounded-full">{selectedPrompt.intent}</span>
+                             </div>
+                             <div>
+                                 <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Mentioned</label>
+                                 {selectedPrompt.brandMentioned ? (
+                                     <span className="text-sm font-bold text-green-600 bg-green-50 border border-green-100 px-3 py-1 rounded-full w-fit">Yes</span>
+                                 ) : (
+                                     <span className="text-sm font-bold text-orange-600 bg-orange-50 border border-orange-100 px-3 py-1 rounded-full w-fit">No</span>
+                                 )}
+                             </div>
+                             <div>
+                                 <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Market Position</label>
+                                 <span className="text-sm font-medium text-slate-600 bg-slate-200/50 border border-slate-200 px-3 py-1 rounded-full">
+                                    {selectedPrompt.rank ? `Rank #${selectedPrompt.rank}` : 'N/A'}
+                                 </span>
+                             </div>
+                             <div>
+                                 <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Competitors Found</label>
+                                 <div className="flex flex-wrap gap-2">
+                                     {selectedPrompt.competitorsMentioned.map(c => (
+                                         <span key={c} className="text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">{c}</span>
+                                     ))}
+                                     {selectedPrompt.competitorsMentioned.length === 0 && <span className="text-xs text-slate-400">-</span>}
+                                 </div>
+                             </div>
+                        </div>
+
+                        {/* Recommendation */}
+                        {selectedPrompt.recommendation && (
+                           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-citrio-yellow">
+                              <h4 className="font-bold text-slate-900 mb-2 flex items-center gap-2 text-sm">
+                                 {ICONS.Zap} Strategic Recommendation
+                              </h4>
+                              <p className="text-sm text-slate-600 leading-relaxed">
+                                 {selectedPrompt.recommendation}
+                              </p>
+                           </div>
+                        )}
+
+                        {/* Citations */}
+                        <div>
+                           <label className="text-xs font-bold text-slate-400 uppercase block mb-3">Sources Cited</label>
+                           <div className="flex flex-wrap gap-3">
+                              {selectedPrompt.citations && selectedPrompt.citations.length > 0 ? (
+                                 selectedPrompt.citations.map((c, i) => (
+                                    <a key={i} href={c.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:border-citrio-dark hover:text-citrio-dark transition-all shadow-sm">
+                                       {ICONS.External} {c.source}
+                                    </a>
+                                 ))
+                              ) : (
+                                 <span className="text-sm text-slate-400 italic bg-slate-100 px-3 py-1 rounded">No specific citations found in this response.</span>
+                              )}
+                           </div>
+                        </div>
+
+                        {/* Base Prompt */}
+                        <div>
+                             <label className="text-xs font-bold text-slate-400 uppercase block mb-2">Base Prompt</label>
+                             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-slate-800 font-medium text-lg leading-relaxed">
+                                "{selectedPrompt.text}"
+                             </div>
+                        </div>
+
+                        {/* Full Response */}
+                        <div className="flex-1">
+                             <div className="flex justify-between items-end mb-2">
+                                <label className="text-xs font-bold text-slate-400 uppercase block">AI Response</label>
+                             </div>
+                             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-slate-600 leading-8">
+                                {renderHighlightedText(selectedPrompt.responseText)}
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
       </main>
     </div>
   );

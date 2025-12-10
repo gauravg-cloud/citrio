@@ -32,7 +32,8 @@ import {
   Hash,
   Sparkles,
   BarChart,
-  Layers
+  Layers,
+  Copy
 } from 'lucide-react';
 
 export const ICONS = {
@@ -69,7 +70,8 @@ export const ICONS = {
   Hash: <Hash size={18} />,
   Sparkles: <Sparkles size={18} />,
   BarChart: <BarChart size={18} />,
-  Layers: <Layers size={18} />
+  Layers: <Layers size={18} />,
+  Copy: <Copy size={16} />
 };
 
 export const COLORS = {
